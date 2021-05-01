@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <algorithm>
 
 class SoundCapturer
 {
@@ -91,7 +92,7 @@ public:
     void update()
     {
         pa_simple_read(streamServer, buffer.data(), buffer.size()*sizeof(std::int16_t), nullptr);
-        std::cout << buffer[0] << ", " << buffer[1] << "\n";
+        //std::cout << buffer[0] << ", " << buffer[1] << "\n";
     }
 
 private:
@@ -110,9 +111,52 @@ private:
     pa_simple* streamServer = nullptr;
 };
 
+class Renderer
+{
+public:
+
+    Renderer() = default;
+
+    Renderer(size_t width)
+        : width(width)
+    {}
+
+    void draw(const std::vector<int>& xs)const
+    {
+        const std::string str("⠀⠁⠂⠃⠄⠅⠆⠇⡀⡁⡂⡃⡄⡅⡆⡇⠈⠉⠊⠋⠌⠍⠎⠏⡈⡉⡊⡋⡌⡍⡎⡏⠐⠑⠒⠓⠔⠕⠖⠗⡐⡑⡒⡓⡔⡕⡖⡗⠘⠙⠚⠛⠜⠝⠞⠟⡘⡙⡚⡛⡜⡝⡞⡟⠠⠡⠢⠣⠤⠥⠦⠧⡠⡡⡢⡣⡤⡥⡦⡧⠨⠩⠪⠫⠬⠭⠮⠯⡨⡩⡪⡫⡬⡭⡮⡯⠰⠱⠲⠳⠴⠵⠶⠷⡰⡱⡲⡳⡴⡵⡶⡷⠸⠹⠺⠻⠼⠽⠾⠿⡸⡹⡺⡻⡼⡽⡾⡿⢀⢁⢂⢃⢄⢅⢆⢇⣀⣁⣂⣃⣄⣅⣆⣇⢈⢉⢊⢋⢌⢍⢎⢏⣈⣉⣊⣋⣌⣍⣎⣏⢐⢑⢒⢓⢔⢕⢖⢗⣐⣑⣒⣓⣔⣕⣖⣗⢘⢙⢚⢛⢜⢝⢞⢟⣘⣙⣚⣛⣜⣝⣞⣟⢠⢡⢢⢣⢤⢥⢦⢧⣠⣡⣢⣣⣤⣥⣦⣧⢨⢩⢪⢫⢬⢭⢮⢯⣨⣩⣪⣫⣬⣭⣮⣯⢰⢱⢲⢳⢴⢵⢶⢷⣰⣱⣲⣳⣴⣵⣶⣷⢸⢹⢺⢻⢼⢽⢾⢿⣸⣹⣺⣻⣼⣽⣾⣿");
+
+        const int bs[] = {0, 0x8, 0xc, 0xe, 0xf};
+        //const int bs[] = {0, 0x8, 0x4, 0x2, 0x1};
+
+        std::cout << '\r';
+
+        for (int i = 0; i < xs.size(); i += 2)
+        {
+            const int x = std::max(0, std::min(4, xs[i]));
+            int index = bs[x];
+            if (i + 1 < xs.size())
+            {
+                const int x1 = std::max(0, std::min(4, xs[i + 1]));
+                index |= (bs[x1] << 4);
+            }
+
+            std::cout << str.substr(index*3, 3);
+        }
+
+        std::cout << std::flush;
+    }
+
+private:
+
+    size_t width;
+};
+
 int main()
 {
     SoundCapturer capturer;
+
+    std::vector<int> xs({0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1, 0});
+    Renderer renderer(xs.size());
 
     if (!capturer.init())
     {
@@ -122,6 +166,9 @@ int main()
     for (;;)
     {
         capturer.update();
+
+        renderer.draw(xs);
+        std::rotate(xs.begin(), xs.begin() + 1, xs.end());
     }
 
     return 0;
