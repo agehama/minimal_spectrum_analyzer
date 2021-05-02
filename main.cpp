@@ -2,10 +2,84 @@
 #include <pulse/simple.h>
 #include <pulse/error.h>
 
+#include <fft.h>
+#include <fft_internal.h>
+
 #include <vector>
 #include <string>
 #include <iostream>
 #include <algorithm>
+
+class SpectrumAnalyzer
+{
+public:
+
+    SpectrumAnalyzer() = default;
+
+    SpectrumAnalyzer(size_t fftSampleSize, int samplingFrequency)
+    {
+        init(fftSampleSize, samplingFrequency);
+    }
+
+    ~SpectrumAnalyzer()
+    {
+        mufft_free(input);
+        mufft_free(output);
+        mufft_free_plan_1d(muplan);
+    }
+
+    void init(size_t fftSampleSize, int samplingFrequency)
+    {
+        sampleSize = fftSampleSize;
+        unitFreq = samplingFrequency / static_cast<float>(sampleSize);
+
+        input = static_cast<float*>(mufft_alloc(sampleSize * sizeof(float)));
+        output = static_cast<cfloat*>(mufft_alloc(sampleSize * sizeof(cfloat)));
+        muplan = mufft_create_plan_1d_r2c(sampleSize, MUFFT_FLAG_CPU_ANY);
+    }
+
+    void update(const std::vector<std::int16_t>& buffer)
+    {
+        assert(sampleSize * 2 == buffer.size());
+
+        const float coef = 1.0f / 32768.0f;
+        for (size_t i = 0; i < sampleSize; ++i)
+        {
+            input[i] = coef * buffer[i*2];
+        }
+
+        mufft_execute_plan_1d(muplan, output, input);
+
+        const size_t outputSize = sampleSize / 2;
+        const float normalizeCoef = 2.0f / outputSize;
+
+        spectrumView.resize(outputSize - 1);
+        for (size_t i = 0; i < spectrumView.size(); ++i)
+        {
+            const cfloat x = output[i + 1];
+            const float rx = normalizeCoef * x.real;
+            const float ix = normalizeCoef * x.imag;
+
+            spectrumView[i] = std::sqrt(rx*rx + ix*ix);
+        }
+    }
+
+    const std::vector<float>& spectrum()const
+    {
+        return spectrumView;
+    }
+
+private:
+
+    std::vector<float> spectrumView;
+
+    float* input = nullptr;
+    cfloat* output = nullptr;
+    mufft_plan_1d* muplan = nullptr;
+
+    size_t sampleSize = 0;
+    float unitFreq = 0.0f;
+};
 
 class SoundCapturer
 {
@@ -21,7 +95,7 @@ public:
         }
     }
 
-    bool init()
+    bool init(size_t bufferSize, int samplingFrequency)
     {
         const auto contextCallback = [](pa_context* context, void* userdata)
         {
@@ -72,7 +146,7 @@ public:
 
         const pa_sample_spec ss = {
             .format = PA_SAMPLE_S16LE,
-            .rate = 44100,
+            .rate = static_cast<std::uint32_t>(samplingFrequency),
             .channels = 2,
         };
 
@@ -84,15 +158,20 @@ public:
             return false;
         }
 
-        buffer.resize(128);
+        buffer.resize(bufferSize);
 
         return true;
     }
 
     void update()
     {
-        pa_simple_read(streamServer, buffer.data(), buffer.size()*sizeof(std::int16_t), nullptr);
+        pa_simple_read(streamServer, buffer.data(), buffer.size() * sizeof(std::int16_t), nullptr);
         //std::cout << buffer[0] << ", " << buffer[1] << "\n";
+    }
+
+    const std::vector<std::int16_t>& getBuffer()const
+    {
+        return buffer;
     }
 
 private:
@@ -121,7 +200,7 @@ public:
         : width(width)
     {}
 
-    void draw(const std::vector<int>& xs)const
+    void draw(const std::vector<float>& values)const
     {
         const std::string str("⠀⠁⠂⠃⠄⠅⠆⠇⡀⡁⡂⡃⡄⡅⡆⡇⠈⠉⠊⠋⠌⠍⠎⠏⡈⡉⡊⡋⡌⡍⡎⡏⠐⠑⠒⠓⠔⠕⠖⠗⡐⡑⡒⡓⡔⡕⡖⡗⠘⠙⠚⠛⠜⠝⠞⠟⡘⡙⡚⡛⡜⡝⡞⡟⠠⠡⠢⠣⠤⠥⠦⠧⡠⡡⡢⡣⡤⡥⡦⡧⠨⠩⠪⠫⠬⠭⠮⠯⡨⡩⡪⡫⡬⡭⡮⡯⠰⠱⠲⠳⠴⠵⠶⠷⡰⡱⡲⡳⡴⡵⡶⡷⠸⠹⠺⠻⠼⠽⠾⠿⡸⡹⡺⡻⡼⡽⡾⡿⢀⢁⢂⢃⢄⢅⢆⢇⣀⣁⣂⣃⣄⣅⣆⣇⢈⢉⢊⢋⢌⢍⢎⢏⣈⣉⣊⣋⣌⣍⣎⣏⢐⢑⢒⢓⢔⢕⢖⢗⣐⣑⣒⣓⣔⣕⣖⣗⢘⢙⢚⢛⢜⢝⢞⢟⣘⣙⣚⣛⣜⣝⣞⣟⢠⢡⢢⢣⢤⢥⢦⢧⣠⣡⣢⣣⣤⣥⣦⣧⢨⢩⢪⢫⢬⢭⢮⢯⣨⣩⣪⣫⣬⣭⣮⣯⢰⢱⢲⢳⢴⢵⢶⢷⣰⣱⣲⣳⣴⣵⣶⣷⢸⢹⢺⢻⢼⢽⢾⢿⣸⣹⣺⣻⣼⣽⣾⣿");
 
@@ -130,14 +209,36 @@ public:
 
         std::cout << '\r';
 
-        for (int i = 0; i < xs.size(); i += 2)
+        const size_t resolution = width * 2;
+        const size_t unitBarWidth = values.size() / resolution;
+        for (size_t charIndex = 0; charIndex < width; ++charIndex)
         {
-            const int x = std::max(0, std::min(4, xs[i]));
-            int index = bs[x];
-            if (i + 1 < xs.size())
+            const size_t leftIndex = unitBarWidth * (charIndex * 2 + 0);
+            const size_t rightIndex = unitBarWidth * (charIndex * 2 + 1);
+
+            int index = 0;
             {
-                const int x1 = std::max(0, std::min(4, xs[i + 1]));
-                index |= (bs[x1] << 4);
+                float maxValue = 0.0f;
+                for (size_t i = leftIndex; i < leftIndex + unitBarWidth; ++i)
+                {
+                    maxValue = std::max(maxValue, values[i]*2);
+                }
+
+                const int xi = static_cast<int>(maxValue / 0.2f);
+                const int x = std::max(0, std::min(4, xi));
+                index |= bs[x];
+            }
+
+            {
+                float maxValue = 0.0f;
+                for (size_t i = rightIndex; i < rightIndex + unitBarWidth; ++i)
+                {
+                    maxValue = std::max(maxValue, values[i]*2);
+                }
+
+                const int xi = static_cast<int>(maxValue / 0.2f);
+                const int x = std::max(0, std::min(4, xi));
+                index |= (bs[x] << 4);
             }
 
             std::cout << str.substr(index*3, 3);
@@ -155,10 +256,14 @@ int main()
 {
     SoundCapturer capturer;
 
-    std::vector<int> xs({0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1, 0});
-    Renderer renderer(xs.size());
+    const size_t N = 2048;
 
-    if (!capturer.init())
+    int samplingFrequency = 44100;
+    SpectrumAnalyzer analyzer(N, samplingFrequency);
+
+    Renderer renderer(16);
+
+    if (!capturer.init(N * 2, samplingFrequency))
     {
         return 1;
     }
@@ -167,8 +272,9 @@ int main()
     {
         capturer.update();
 
-        renderer.draw(xs);
-        std::rotate(xs.begin(), xs.begin() + 1, xs.end());
+        analyzer.update(capturer.getBuffer());
+
+        renderer.draw(analyzer.spectrum());
     }
 
     return 0;

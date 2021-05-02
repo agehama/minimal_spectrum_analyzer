@@ -1,0 +1,3 @@
+[submodule "external/muFFT"]
+	path = external/muFFT
+	url = https://github.com/Themaister/muFFT.git
