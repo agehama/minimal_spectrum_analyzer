@@ -12,9 +12,9 @@ public:
 
     SpectrumAnalyzer() = default;
 
-    SpectrumAnalyzer(size_t fftSampleSize, int samplingFrequency)
+    SpectrumAnalyzer(size_t fftSampleSize, int zeroPadding, int samplingFrequency)
     {
-        init(fftSampleSize, samplingFrequency);
+        init(fftSampleSize, zeroPadding, samplingFrequency);
     }
 
     ~SpectrumAnalyzer()
@@ -25,15 +25,16 @@ public:
         mufft_free_plan_1d(muplan);
     }
 
-    void init(size_t fftSampleSize, int samplingFrequency)
+    void init(size_t fftSampleSize, int zeroPadding, int samplingFrequency)
     {
+        paddingScale = zeroPadding;
         sampleSize = fftSampleSize;
-        unitFreq = samplingFrequency / static_cast<float>(sampleSize);
+        unitFreq = samplingFrequency / static_cast<float>(sampleSize * paddingScale);
 
         input = static_cast<float*>(mufft_alloc(sampleSize * sizeof(float)));
-        input2 = static_cast<float*>(mufft_alloc(sampleSize * sizeof(float)));
-        output = static_cast<cfloat*>(mufft_alloc(sampleSize * sizeof(cfloat)));
-        muplan = mufft_create_plan_1d_r2c(sampleSize, MUFFT_FLAG_CPU_ANY);
+        input2 = static_cast<float*>(mufft_alloc(sampleSize * paddingScale * sizeof(float)));
+        output = static_cast<cfloat*>(mufft_alloc(sampleSize * paddingScale * sizeof(cfloat)));
+        muplan = mufft_create_plan_1d_r2c(sampleSize * paddingScale, MUFFT_FLAG_CPU_ANY);
     }
 
     void update(const std::vector<std::int16_t>& buffer, size_t headIndex, float dBsplMin, float dBsplMax)
@@ -66,6 +67,11 @@ private:
             const float t = 1.0f * i / (sampleSize - 1);
             const float hammingWindow = (0.54f - 0.46f * std::cos(2.0f * pi * t));
             input2[i] = hammingWindow * input[i];
+        }
+
+        for (int i = sampleSize; i < sampleSize * paddingScale; ++i)
+        {
+            input2[i] = 0;
         }
 
         mufft_execute_plan_1d(muplan, output, input2);
@@ -133,6 +139,7 @@ private:
     cfloat* output = nullptr;
     mufft_plan_1d* muplan = nullptr;
 
+    int paddingScale = 4;
     size_t sampleSize = 0;
     float unitFreq = 0.0f;
 };

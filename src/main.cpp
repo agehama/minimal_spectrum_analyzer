@@ -12,6 +12,7 @@ int main(int argc, const char* argv[])
 
         options.add_options()
             ("h,help", "print this message")
+            ("z,zero_padding", "zero padding scale (default=4)", cxxopts::value<int>(), "N")
             ("w,width", "number of characters to display (default=8)", cxxopts::value<int>(), "N")
             ("min_level", "minimum volume threshold for displayed spectrum (default=40)", cxxopts::value<float>(), "min")
             ("max_level", "maximum volume threshold for displayed spectrum (default=75)", cxxopts::value<float>(), "max")
@@ -24,6 +25,13 @@ int main(int argc, const char* argv[])
             std::cout << options.help() << std::endl;
             return 0;
         }
+
+        int zeroPadding = 4;
+        if (result.count("zero_padding"))
+        {
+            zeroPadding = result["zero_padding"].as<int>();
+        }
+        std::cout << "zeroPadding: " << zeroPadding << std::endl;
 
         int width = 8;
         if (result.count("width"))
@@ -51,7 +59,7 @@ int main(int argc, const char* argv[])
         const size_t N = 4096;
 
         int samplingFrequency = 44100;
-        SpectrumAnalyzer analyzer(N, samplingFrequency);
+        SpectrumAnalyzer analyzer(N, zeroPadding, samplingFrequency);
 
         Renderer renderer(width);
 
