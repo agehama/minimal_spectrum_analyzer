@@ -5,13 +5,12 @@
 #include "SoundCapturerPulseAudio.hpp"
 #include "SoundCapturerWASAPI.hpp"
 
-#ifdef ANALYZER_USE_WASAPI
-#include <io.h>
-#include <fcntl.h>
-#endif
-
 int main(int argc, const char* argv[])
 {
+#ifdef _WINDOWS
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     try
     {
         cxxopts::Options options(argv[0], "A tiny sound visualizer running on the command line");
@@ -61,7 +60,6 @@ int main(int argc, const char* argv[])
         std::cout << "max_level: " << maxLevel << std::endl;
 
 #ifdef ANALYZER_USE_WASAPI
-        _setmode(_fileno(stdout), _O_U16TEXT);
         SoundCapturerWASAPI capturer;
 #else
         SoundCapturerPulseAudio capturer;

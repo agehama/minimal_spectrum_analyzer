@@ -15,8 +15,8 @@ else (WIN32)
 endif (WIN32)
 
 if (MSVC)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT /source-charset:utf-8 /bigobj /Zi /DEBUG")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd /source-charset:utf-8 /bigobj /Zi /DEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT /source-charset:utf-8 /execution-charset:utf-8 /Zi /DEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd /source-charset:utf-8 /execution-charset:utf-8 /Zi /DEBUG")
 endif (MSVC)
 
 message("ANALYZER_SYSTEM_LIBS: ${ANALYZER_SYSTEM_LIBS}")
@@ -33,5 +33,4 @@ add_subdirectory(external/cxxopts)
 target_include_directories(analyzer PUBLIC "${CMAKE_SOURCE_DIR}/external/cxxopts/include")
 
 
-#target_link_libraries(analyzer ${PULSEAUDIO_LIBRARIES} ${PULSEAUDIOSIMPLE_LIBRARIES} muFFT muFFT-avx muFFT-sse muFFT-sse3)
 target_link_libraries(analyzer ${ANALYZER_SYSTEM_LIBS} muFFT muFFT-avx muFFT-sse muFFT-sse3)
