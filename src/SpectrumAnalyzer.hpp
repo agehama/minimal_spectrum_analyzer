@@ -36,7 +36,7 @@ public:
         muplan = mufft_create_plan_1d_r2c(sampleSize, MUFFT_FLAG_CPU_ANY);
     }
 
-    void update(const std::vector<std::int16_t>& buffer, size_t headIndex)
+    void update(const std::vector<std::int16_t>& buffer, size_t headIndex, float dBsplMin, float dBsplMax)
     {
         assert(sampleSize * 2 == buffer.size());
 
@@ -48,7 +48,7 @@ public:
 
         executeFFT();
 
-        updateSpectrum();
+        updateSpectrum(dBsplMin, dBsplMax);
     }
 
     const std::vector<float>& spectrum()const
@@ -71,7 +71,7 @@ private:
         mufft_execute_plan_1d(muplan, output, input2);
     }
 
-    void updateSpectrum()
+    void updateSpectrum(float dBsplMin, float dBsplMax)
     {
         const size_t outputSize = sampleSize / 2;
         const float normalizeCoef = 2.0f / outputSize;
@@ -97,8 +97,6 @@ private:
             return std::sqrt(rx * rx + ix * ix);
         };
 
-        const float dBsplMin = 40.0f;
-        const float dBsplMax = 75.0f;
         const float p0 = 20 * 1.0e-5f;
 
         spectrumView.resize(outputSize - 1);

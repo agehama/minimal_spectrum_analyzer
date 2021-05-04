@@ -1,3 +1,6 @@
 [submodule "external/muFFT"]
 	path = external/muFFT
 	url = https://github.com/Themaister/muFFT.git
+[submodule "external/cxxopts"]
+	path = external/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git

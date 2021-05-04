@@ -12,4 +12,7 @@ add_subdirectory(external/muFFT)
 target_include_directories(analyzer PUBLIC "${CMAKE_SOURCE_DIR}/external/muFFT")
 target_link_directories(analyzer PUBLIC "${CMAKE_BINARY_DIR}/external/muFFT")
 
+add_subdirectory(external/cxxopts)
+target_include_directories(analyzer PUBLIC "${CMAKE_SOURCE_DIR}/external/cxxopts/include")
+
 target_link_libraries(analyzer ${PULSEAUDIO_LIBRARIES} ${PULSEAUDIOSIMPLE_LIBRARIES} muFFT muFFT-avx muFFT-sse muFFT-sse3)
