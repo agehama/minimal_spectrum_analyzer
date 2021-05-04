@@ -1,15 +1,19 @@
-#include <pulse/pulseaudio.h>
-#include <pulse/error.h>
+#pragma once
+
+#ifdef ANALYZER_USE_PULSEAUDIO
 
 #include <vector>
 #include <string>
 #include <iostream>
 
-class SoundCapturer
+#include <pulse/pulseaudio.h>
+#include <pulse/error.h>
+
+class SoundCapturerPulseAudio
 {
 public:
 
-    SoundCapturer() = default;
+    SoundCapturerPulseAudio() = default;
 
     bool init(size_t bufferSize, int samplingFrequency)
     {
@@ -56,18 +60,16 @@ public:
 
                     if (data)
                     {
-                        const size_t head = pData->bufferHeadIndex;
                         const size_t bufferCount = pData->buffer.size();
                         const auto readData = static_cast<const std::int16_t*>(data);
 
-                        for (size_t i = 0; i * 2 < bytesLength; ++i)
+                        for (size_t i = 0; i < bytesLength; i += 2)
                         {
-                            pData->buffer[(head + i) % bufferCount] = readData[i];
+                            pData->buffer[pData->bufferHeadIndex] = readData[i] / 32767.0f;
+                            ++pData->bufferHeadIndex;
+                            pData->bufferHeadIndex %= bufferCount;
                         }
                     }
-
-                    pData->bufferHeadIndex += bytesLength / 2;
-                    pData->bufferHeadIndex %= pData->buffer.size();
 
                     pa_stream_drop(s);
                 }
@@ -131,7 +133,7 @@ public:
         }
     }
 
-    const std::vector<std::int16_t>& getBuffer()const
+    const std::vector<float>& getBuffer()const
     {
         return data.buffer;
     }
@@ -156,7 +158,7 @@ private:
         };
 
         std::string sinkName;
-        std::vector<std::int16_t> buffer;
+        std::vector<float> buffer;
         size_t bufferHeadIndex = 0;
 
         pa_stream* stream = nullptr;
@@ -165,3 +167,5 @@ private:
 
     UserData data;
 };
+
+#endif

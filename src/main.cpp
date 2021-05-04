@@ -1,8 +1,12 @@
 #include <cxxopts.hpp>
 
 #include "SpectrumAnalyzer.hpp"
-#include "SoundCapturer.hpp"
 #include "Renderer.hpp"
+#include "SoundCapturerPulseAudio.hpp"
+#include "SoundCapturerWASAPI.hpp"
+
+#include <io.h>
+#include <fcntl.h>
 
 int main(int argc, const char* argv[])
 {
@@ -54,16 +58,22 @@ int main(int argc, const char* argv[])
         }
         std::cout << "max_level: " << maxLevel << std::endl;
 
-        SoundCapturer capturer;
+        _setmode(_fileno(stdout), _O_U16TEXT);
+
+#ifdef ANALYZER_USE_WASAPI
+        SoundCapturerWASAPI capturer;
+#else
+        SoundCapturerPulseAudio capturer;
+#endif
 
         const size_t N = 4096;
 
-        int samplingFrequency = 44100;
-        SpectrumAnalyzer analyzer(N, zeroPadding, samplingFrequency);
+        int samplingFrequency = 48000;
+        SpectrumAnalyzer analyzer(N, samplingFrequency);
 
         Renderer renderer(width);
 
-        if (!capturer.init(N * 2, samplingFrequency))
+        if (!capturer.init(N, samplingFrequency))
         {
             return 1;
         }

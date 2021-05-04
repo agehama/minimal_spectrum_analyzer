@@ -37,14 +37,14 @@ public:
         muplan = mufft_create_plan_1d_r2c(sampleSize * paddingScale, MUFFT_FLAG_CPU_ANY);
     }
 
-    void update(const std::vector<std::int16_t>& buffer, size_t headIndex, float dBsplMin, float dBsplMax)
+    void update(const std::vector<float>& buffer, size_t headIndex, float dBsplMin, float dBsplMax)
     {
-        assert(sampleSize * 2 == buffer.size());
+        assert(sampleSize == buffer.size());
 
-        const float coef = 1.0f / 32767.0f;
+        const float coef = 1.0f;
         for (size_t i = 0; i < sampleSize; ++i)
         {
-            input[i] = coef * buffer[(headIndex + i*2) % buffer.size()];
+            input[i] = coef * buffer[(headIndex + i) % buffer.size()];
         }
 
         executeFFT();
