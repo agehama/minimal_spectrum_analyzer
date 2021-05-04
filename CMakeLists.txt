@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(PulseAudio REQUIRED)
 
-add_executable(analyzer main.cpp)
+add_executable(analyzer src/main.cpp)
 
 add_subdirectory(external/muFFT)
 target_include_directories(analyzer PUBLIC "${CMAKE_SOURCE_DIR}/external/muFFT")
