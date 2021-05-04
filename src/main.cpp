@@ -5,8 +5,10 @@
 #include "SoundCapturerPulseAudio.hpp"
 #include "SoundCapturerWASAPI.hpp"
 
+#ifdef ANALYZER_USE_WASAPI
 #include <io.h>
 #include <fcntl.h>
+#endif
 
 int main(int argc, const char* argv[])
 {
@@ -58,9 +60,8 @@ int main(int argc, const char* argv[])
         }
         std::cout << "max_level: " << maxLevel << std::endl;
 
-        _setmode(_fileno(stdout), _O_U16TEXT);
-
 #ifdef ANALYZER_USE_WASAPI
+        _setmode(_fileno(stdout), _O_U16TEXT);
         SoundCapturerWASAPI capturer;
 #else
         SoundCapturerPulseAudio capturer;
@@ -69,7 +70,7 @@ int main(int argc, const char* argv[])
         const size_t N = 4096;
 
         int samplingFrequency = 48000;
-        SpectrumAnalyzer analyzer(N, samplingFrequency);
+        SpectrumAnalyzer analyzer(N, zeroPadding, samplingFrequency);
 
         Renderer renderer(width);
 

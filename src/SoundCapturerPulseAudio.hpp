@@ -53,9 +53,9 @@ public:
 
                     assert(bytesLength % 4 == 0);
 
-                    if (pData->buffer.size() < bytesLength)
+                    if (pData->buffer.size() < bytesLength / 4)
                     {
-                        pData->buffer.resize(bytesLength);
+                        pData->buffer.resize(bytesLength / 4);
                     }
 
                     if (data)
@@ -63,7 +63,7 @@ public:
                         const size_t bufferCount = pData->buffer.size();
                         const auto readData = static_cast<const std::int16_t*>(data);
 
-                        for (size_t i = 0; i < bytesLength; i += 2)
+                        for (size_t i = 0; i < bytesLength / 2; i += 2)
                         {
                             pData->buffer[pData->bufferHeadIndex] = readData[i] / 32767.0f;
                             ++pData->bufferHeadIndex;
