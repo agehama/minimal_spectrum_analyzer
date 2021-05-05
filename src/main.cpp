@@ -21,15 +21,15 @@ int main(int argc, const char* argv[])
     std::string lineFeed;
     try
     {
-        cxxopts::Options options(argv[0], "A tiny sound visualizer which runs on the command line");
+        cxxopts::Options options(argv[0], "A tiny, embeddable command-line sound visualizer");
 
         options.add_options()
             ("h,help", "print this message")
             ("c,chars", "draw the spectrum using N characters", cxxopts::value<int>()->default_value("32"), "N")
             ("b,bottom_db", "the minimum intensity(dB) of the spectrum to be displayed. N in [20, 40] is desirable", cxxopts::value<float>()->default_value("30"), "N")
             ("t,top_db", "the maximum intensity(dB) of the spectrum to be displayed. N in [50, 80] is desirable", cxxopts::value<float>()->default_value("70"), "N")
-            ("n,num_fft", "FFT sample size", cxxopts::value<int>()->default_value("4096"), "N")
-            ("z,zero_padding", "zero padding scale", cxxopts::value<int>()->default_value("4"), "N")
+            ("n,num_fft", "FFT sample size", cxxopts::value<int>()->default_value("8192"), "N")
+            ("z,zero_padding", "zero padding rate", cxxopts::value<int>()->default_value("2"), "N")
             ("w,window_size", "gaussian smoothing window size", cxxopts::value<int>()->default_value("1"), "N")
             ("s,smoothing", "smoothing parameter", cxxopts::value<float>()->default_value("0.5"), "x in (0.0, 1.0]")
             ("line_feed", "line feed character", cxxopts::value<std::string>()->default_value("CR"), "{\'CR\'|\'LF\'|\'CRLF\'}")
@@ -83,12 +83,13 @@ int main(int argc, const char* argv[])
     SoundCapturerPulseAudio capturer;
 #endif
 
+    int sampleSize = fftSize / zeroPaddingScale;
     int samplingFrequency = 48000;
     SpectrumAnalyzer analyzer(fftSize, zeroPaddingScale, samplingFrequency);
 
     Renderer renderer(characterSize, lineFeed);
 
-    if (!capturer.init(fftSize, samplingFrequency))
+    if (!capturer.init(sampleSize, samplingFrequency))
     {
         return 1;
     }
@@ -97,7 +98,7 @@ int main(int argc, const char* argv[])
     {
         capturer.update();
 
-        if (fftSize < capturer.bufferReadCount())
+        if (sampleSize < capturer.bufferReadCount())
         {
             analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), bottomLevel, topLevel);
 

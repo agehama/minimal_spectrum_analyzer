@@ -28,21 +28,22 @@ public:
     void init(size_t fftSampleSize, int zeroPadding, int samplingFrequency)
     {
         paddingScale = zeroPadding;
-        sampleSize = fftSampleSize;
-        unitFreq = samplingFrequency / static_cast<float>(sampleSize * paddingScale);
+        fftSize = fftSampleSize;
+        inputSize = fftSize / paddingScale;
+        unitFreq = samplingFrequency / static_cast<float>(fftSize);
 
-        input = static_cast<float*>(mufft_alloc(sampleSize * sizeof(float)));
-        input2 = static_cast<float*>(mufft_alloc(sampleSize * paddingScale * sizeof(float)));
-        output = static_cast<cfloat*>(mufft_alloc(sampleSize * paddingScale * sizeof(cfloat)));
-        muplan = mufft_create_plan_1d_r2c(sampleSize * paddingScale, MUFFT_FLAG_CPU_ANY);
+        input = static_cast<float*>(mufft_alloc(inputSize * sizeof(float)));
+        input2 = static_cast<float*>(mufft_alloc(fftSize * sizeof(float)));
+        output = static_cast<cfloat*>(mufft_alloc(fftSize * sizeof(cfloat)));
+        muplan = mufft_create_plan_1d_r2c(fftSize, MUFFT_FLAG_CPU_ANY);
     }
 
     void update(const std::vector<float>& buffer, size_t headIndex, float dBsplMin, float dBsplMax)
     {
-        assert(sampleSize == buffer.size());
+        assert(inputSize == buffer.size());
 
         const float coef = 1.0f;
-        for (size_t i = 0; i < sampleSize; ++i)
+        for (size_t i = 0; i < inputSize; ++i)
         {
             input[i] = coef * buffer[(headIndex + i) % buffer.size()];
         }
@@ -62,14 +63,14 @@ private:
     void executeFFT()
     {
         const float pi = 3.1415926535f;
-        for (int i = 0; i < sampleSize; ++i)
+        for (int i = 0; i < inputSize; ++i)
         {
-            const float t = 1.0f * i / (sampleSize - 1);
+            const float t = 1.0f * i / (inputSize - 1);
             const float hammingWindow = (0.54f - 0.46f * std::cos(2.0f * pi * t));
             input2[i] = hammingWindow * input[i];
         }
 
-        for (int i = sampleSize; i < sampleSize * paddingScale; ++i)
+        for (int i = fftSize; i < fftSize; ++i)
         {
             input2[i] = 0;
         }
@@ -79,7 +80,7 @@ private:
 
     void updateSpectrum(float dBsplMin, float dBsplMax)
     {
-        const size_t outputSize = sampleSize / 2;
+        const size_t outputSize = fftSize / 2;
         const float normalizeCoef = 2.0f / outputSize;
 
         const float logBase = 10.0f;
@@ -141,6 +142,7 @@ private:
     mufft_plan_1d* muplan = nullptr;
 
     int paddingScale = 4;
-    size_t sampleSize = 0;
+    size_t fftSize = 0;
+    size_t inputSize = 0;
     float unitFreq = 0.0f;
 };
