@@ -11,22 +11,27 @@ int main(int argc, const char* argv[])
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
-    int zeroPadding = 0;
-    int width = 0;
-    float minLevel = 0;
-    float maxLevel = 0;
+    int characterSize = 0;
+    float bottomLevel = 0;
+    float topLevel = 0;
+    int fftSize = 0;
+    int zeroPaddingScale = 0;
+    int windowSize = 0;
+    float smoothing = 0;
     std::string lineFeed;
-
     try
     {
-        cxxopts::Options options(argv[0], "A tiny sound visualizer running on the command line");
+        cxxopts::Options options(argv[0], "A tiny sound visualizer which runs on the command line");
 
         options.add_options()
             ("h,help", "print this message")
+            ("c,chars", "draw the spectrum using N characters", cxxopts::value<int>()->default_value("32"), "N")
+            ("b,bottom_db", "the minimum intensity(dB) of the spectrum to be displayed. N in [20, 40] is desirable", cxxopts::value<float>()->default_value("30"), "N")
+            ("t,top_db", "the maximum intensity(dB) of the spectrum to be displayed. N in [50, 80] is desirable", cxxopts::value<float>()->default_value("70"), "N")
+            ("n,num_fft", "FFT sample size", cxxopts::value<int>()->default_value("4096"), "N")
             ("z,zero_padding", "zero padding scale", cxxopts::value<int>()->default_value("4"), "N")
-            ("w,width", "use N characters to draw the spectrum", cxxopts::value<int>()->default_value("16"), "N")
-            ("b,bottom_db", "the minimum intensity of the spectrum to be displayed. N in [20, 40] is desirable", cxxopts::value<float>()->default_value("30"), "N")
-            ("t,top_db", "the maximum intensity of the spectrum to be displayed. N in [60, 80] is desirable", cxxopts::value<float>()->default_value("75"), "N")
+            ("w,window_size", "gaussian smoothing window size", cxxopts::value<int>()->default_value("1"), "N")
+            ("s,smoothing", "smoothing parameter", cxxopts::value<float>()->default_value("0.5"), "x in (0.0, 1.0]")
             ("line_feed", "line feed character", cxxopts::value<std::string>()->default_value("CR"), "{\'CR\'|\'LF\'|\'CRLF\'}")
             ;
 
@@ -38,12 +43,14 @@ int main(int argc, const char* argv[])
             return 0;
         }
 
-        zeroPadding = result["zero_padding"].as<int>();
+        characterSize = result["chars"].as<int>();
+        bottomLevel = result["bottom_db"].as<float>();
+        topLevel = result["top_db"].as<float>();
 
-        width = result["width"].as<int>();
-
-        minLevel = result["bottom_db"].as<float>();
-        maxLevel = result["top_db"].as<float>();
+        fftSize = result["num_fft"].as<int>();
+        zeroPaddingScale = result["zero_padding"].as<int>();
+        windowSize = result["window_size"].as<int>();
+        smoothing = result["smoothing"].as<float>();
 
         const std::string lineFeedStr = result["line_feed"].as<std::string>();
         if (lineFeedStr == "CR")
@@ -76,14 +83,12 @@ int main(int argc, const char* argv[])
     SoundCapturerPulseAudio capturer;
 #endif
 
-    const size_t N = 8192;
-
     int samplingFrequency = 48000;
-    SpectrumAnalyzer analyzer(N, zeroPadding, samplingFrequency);
+    SpectrumAnalyzer analyzer(fftSize, zeroPaddingScale, samplingFrequency);
 
-    Renderer renderer(width, lineFeed);
+    Renderer renderer(characterSize, lineFeed);
 
-    if (!capturer.init(N, samplingFrequency))
+    if (!capturer.init(fftSize, samplingFrequency))
     {
         return 1;
     }
@@ -92,11 +97,11 @@ int main(int argc, const char* argv[])
     {
         capturer.update();
 
-        if (N < capturer.bufferReadCount())
+        if (fftSize < capturer.bufferReadCount())
         {
-            analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), minLevel, maxLevel);
+            analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), bottomLevel, topLevel);
 
-            renderer.draw(analyzer.spectrum());
+            renderer.draw(analyzer.spectrum(), windowSize, smoothing);
 
             ++i;
         }

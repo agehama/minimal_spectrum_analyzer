@@ -128,6 +128,7 @@ private:
             const float spl = 20.0f * std::log10(rd * pressureMax / p0);
 
             const float loudness = std::max(0.0f, (spl - dBsplMin)) / (dBsplMax - dBsplMin);
+
             spectrumView[i] = loudness;
         }
     }
