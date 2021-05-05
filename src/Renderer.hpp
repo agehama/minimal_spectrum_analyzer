@@ -9,19 +9,23 @@ public:
 
     Renderer() = default;
 
-    Renderer(size_t width)
+    Renderer(size_t width, const std::string& lineFeed)
         : width(width)
+        , lineFeed(lineFeed)
     {}
 
-    void draw(const std::vector<float>& values)const
+    void draw(const std::vector<float>& values)
     {
         const std::string str("⠀⠁⠂⠃⠄⠅⠆⠇⡀⡁⡂⡃⡄⡅⡆⡇⠈⠉⠊⠋⠌⠍⠎⠏⡈⡉⡊⡋⡌⡍⡎⡏⠐⠑⠒⠓⠔⠕⠖⠗⡐⡑⡒⡓⡔⡕⡖⡗⠘⠙⠚⠛⠜⠝⠞⠟⡘⡙⡚⡛⡜⡝⡞⡟⠠⠡⠢⠣⠤⠥⠦⠧⡠⡡⡢⡣⡤⡥⡦⡧⠨⠩⠪⠫⠬⠭⠮⠯⡨⡩⡪⡫⡬⡭⡮⡯⠰⠱⠲⠳⠴⠵⠶⠷⡰⡱⡲⡳⡴⡵⡶⡷⠸⠹⠺⠻⠼⠽⠾⠿⡸⡹⡺⡻⡼⡽⡾⡿⢀⢁⢂⢃⢄⢅⢆⢇⣀⣁⣂⣃⣄⣅⣆⣇⢈⢉⢊⢋⢌⢍⢎⢏⣈⣉⣊⣋⣌⣍⣎⣏⢐⢑⢒⢓⢔⢕⢖⢗⣐⣑⣒⣓⣔⣕⣖⣗⢘⢙⢚⢛⢜⢝⢞⢟⣘⣙⣚⣛⣜⣝⣞⣟⢠⢡⢢⢣⢤⢥⢦⢧⣠⣡⣢⣣⣤⣥⣦⣧⢨⢩⢪⢫⢬⢭⢮⢯⣨⣩⣪⣫⣬⣭⣮⣯⢰⢱⢲⢳⢴⢵⢶⢷⣰⣱⣲⣳⣴⣵⣶⣷⢸⢹⢺⢻⢼⢽⢾⢿⣸⣹⣺⣻⣼⣽⣾⣿");
 
         const int bs[] = {0, 0x8, 0xc, 0xe, 0xf};
         //const int bs[] = {0, 0x8, 0x4, 0x2, 0x1};
 
-        std::cout << '\r';
-        std::cout << '|';
+        if (!isFirst)
+        {
+            std::cout << lineFeed;
+        }
+        isFirst = false;
 
         const size_t resolution = width * 2;
         const size_t unitBarWidth = values.size() / resolution;
@@ -58,12 +62,12 @@ public:
             std::cout << str.substr(index*3, 3);
         }
 
-        std::cout << '|';
-
         std::cout << std::flush;
     }
 
 private:
 
+    std::string lineFeed;
     size_t width;
+    bool isFirst = true;
 };

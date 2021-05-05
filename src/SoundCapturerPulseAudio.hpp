@@ -69,6 +69,7 @@ public:
                             ++pData->bufferHeadIndex;
                             pData->bufferHeadIndex %= bufferCount;
                         }
+                        pData->readCount += bytesLength / 2;
                     }
 
                     pa_stream_drop(s);
@@ -143,6 +144,11 @@ public:
         return data.bufferHeadIndex;
     }
 
+    size_t bufferReadCount()const
+    {
+        return data.readCount;
+    }
+
 private:
 
     struct UserData
@@ -160,6 +166,7 @@ private:
         std::string sinkName;
         std::vector<float> buffer;
         size_t bufferHeadIndex = 0;
+        size_t readCount = 0;
 
         pa_stream* stream = nullptr;
         pa_mainloop* mainloop = nullptr;

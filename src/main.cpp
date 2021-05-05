@@ -11,16 +11,23 @@ int main(int argc, const char* argv[])
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
+    int zeroPadding = 0;
+    int width = 0;
+    float minLevel = 0;
+    float maxLevel = 0;
+    std::string lineFeed;
+
     try
     {
         cxxopts::Options options(argv[0], "A tiny sound visualizer running on the command line");
 
         options.add_options()
             ("h,help", "print this message")
-            ("z,zero_padding", "zero padding scale (default=4)", cxxopts::value<int>(), "N")
-            ("w,width", "number of characters to display (default=8)", cxxopts::value<int>(), "N")
-            ("min_level", "minimum volume threshold for displayed spectrum (default=40)", cxxopts::value<float>(), "min")
-            ("max_level", "maximum volume threshold for displayed spectrum (default=75)", cxxopts::value<float>(), "max")
+            ("z,zero_padding", "zero padding scale", cxxopts::value<int>()->default_value("4"), "N")
+            ("w,width", "use N characters to draw the spectrum", cxxopts::value<int>()->default_value("16"), "N")
+            ("b,bottom_db", "the minimum intensity of the spectrum to be displayed. N in [20, 40] is desirable", cxxopts::value<float>()->default_value("30"), "N")
+            ("t,top_db", "the maximum intensity of the spectrum to be displayed. N in [60, 80] is desirable", cxxopts::value<float>()->default_value("75"), "N")
+            ("line_feed", "line feed character", cxxopts::value<std::string>()->default_value("CR"), "{\'CR\'|\'LF\'|\'CRLF\'}")
             ;
 
         auto result = options.parse(argc, argv);
@@ -31,65 +38,68 @@ int main(int argc, const char* argv[])
             return 0;
         }
 
-        int zeroPadding = 4;
-        if (result.count("zero_padding"))
+        zeroPadding = result["zero_padding"].as<int>();
+
+        width = result["width"].as<int>();
+
+        minLevel = result["bottom_db"].as<float>();
+        maxLevel = result["top_db"].as<float>();
+
+        const std::string lineFeedStr = result["line_feed"].as<std::string>();
+        if (lineFeedStr == "CR")
         {
-            zeroPadding = result["zero_padding"].as<int>();
+            lineFeed = std::string("\r");
         }
-        std::cout << "zeroPadding: " << zeroPadding << std::endl;
-
-        int width = 8;
-        if (result.count("width"))
+        else if (lineFeedStr == "LF")
         {
-            width = result["width"].as<int>();
+            lineFeed = std::string("\n");
         }
-        std::cout << "width: " << width << std::endl;
-
-        float minLevel = 40.0f;
-        if (result.count("min_level"))
+        else if (lineFeedStr == "CRLF")
         {
-            minLevel = result["min_level"].as<float>();
+            lineFeed = std::string("\r\n");
         }
-        std::cout << "min_level: " << minLevel << std::endl;
-
-        float maxLevel = 75.0f;
-        if (result.count("max_level"))
+        else
         {
-            maxLevel = result["max_level"].as<float>();
-        }
-        std::cout << "max_level: " << maxLevel << std::endl;
-
-#ifdef ANALYZER_USE_WASAPI
-        SoundCapturerWASAPI capturer;
-#else
-        SoundCapturerPulseAudio capturer;
-#endif
-
-        const size_t N = 4096;
-
-        int samplingFrequency = 48000;
-        SpectrumAnalyzer analyzer(N, zeroPadding, samplingFrequency);
-
-        Renderer renderer(width);
-
-        if (!capturer.init(N, samplingFrequency))
-        {
+            std::cerr << "error: invalid line feed character" << std::endl;
             return 1;
-        }
-
-        for (;;)
-        {
-            capturer.update();
-
-            analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), minLevel, maxLevel);
-
-            renderer.draw(analyzer.spectrum());
         }
     }
     catch (const std::exception& e)
     {
         std::cerr << "error parsing options: " << e.what() << std::endl;
         return 1;
+    }
+
+#ifdef ANALYZER_USE_WASAPI
+    SoundCapturerWASAPI capturer;
+#else
+    SoundCapturerPulseAudio capturer;
+#endif
+
+    const size_t N = 8192;
+
+    int samplingFrequency = 48000;
+    SpectrumAnalyzer analyzer(N, zeroPadding, samplingFrequency);
+
+    Renderer renderer(width, lineFeed);
+
+    if (!capturer.init(N, samplingFrequency))
+    {
+        return 1;
+    }
+
+    for (int i = 0;;)
+    {
+        capturer.update();
+
+        if (N < capturer.bufferReadCount())
+        {
+            analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), minLevel, maxLevel);
+
+            renderer.draw(analyzer.spectrum());
+
+            ++i;
+        }
     }
 
     return 0;
