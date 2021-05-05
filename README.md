@@ -36,13 +36,13 @@ Download and install prerequisites.
 - CMake https://cmake.org/download/
 - Git for Windows https://gitforwindows.org/
 
-Clone source code.
+Clone source code with Git.
 
 ```
 git clone --recursive https://github.com/agehama/minimal_spectrum_analyzer.git
 ```
 
-Configure and Generate with CMake.
+Configure and Generate Visual Studio project.
 ![image](https://user-images.githubusercontent.com/4939010/117149605-541fe780-adf2-11eb-8fb1-2e36ca4f36c3.png)
 
-Open and build project with Visual Studio.
+Open generated project and build with Visual Studio.
