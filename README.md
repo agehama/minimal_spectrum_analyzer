@@ -3,7 +3,7 @@ A tiny, embeddable command-line sound visualizer.
 
 Supports Linux (PulseAudio) and Windows (WASAPI).
 
-<img width="400" alt="ScreenShot" src="https://github.com/agehama/minimal_spectrum_analyzer/blob/images/analyzer.gif">
+![analyzer](https://user-images.githubusercontent.com/4939010/117150219-e922e080-adf2-11eb-9536-fef15c45af80.gif)
 
 ## Building
 
