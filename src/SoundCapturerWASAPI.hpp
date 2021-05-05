@@ -119,6 +119,7 @@ public:
                     ++currentHeadIndex;
                     currentHeadIndex %= buffer.size();
                 }
+                readCount += count / 2;
             }
             else
             {
@@ -145,10 +146,16 @@ public:
         return currentHeadIndex;
     }
 
+    size_t bufferReadCount()const
+    {
+        return readCount;
+    }
+
 private:
 
     std::vector<float> buffer;
     size_t currentHeadIndex = 0;
+    size_t readCount = 0;
 
     WAVEFORMATEX wfx = {
         .wFormatTag = WAVE_FORMAT_PCM,
