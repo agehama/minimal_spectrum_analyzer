@@ -7,7 +7,7 @@
 
 int main(int argc, const char* argv[])
 {
-#ifdef _WINDOWS
+#ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
