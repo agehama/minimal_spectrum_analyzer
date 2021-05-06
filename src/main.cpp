@@ -5,6 +5,7 @@
 
 #include "SpectrumAnalyzer.hpp"
 #include "Renderer.hpp"
+#include "Axis.hpp"
 #include "SoundCapturerPulseAudio.hpp"
 #include "SoundCapturerWASAPI.hpp"
 
@@ -23,6 +24,7 @@ int main(int argc, const char* argv[])
     int zeroPaddingScale = 0;
     int windowSize = 0;
     float smoothing = 0;
+    bool displayAxis = false;
     std::string lineFeed;
     try
     {
@@ -39,6 +41,7 @@ int main(int argc, const char* argv[])
             ("z,zero_padding", "zero padding rate", cxxopts::value<int>()->default_value("2"), "N")
             ("w,window_size", "gaussian smoothing window size", cxxopts::value<int>()->default_value("1"), "N")
             ("s,smoothing", "smoothing parameter", cxxopts::value<float>()->default_value("0.5"), "x in (0.0, 1.0]")
+            ("a,axis", "display axis if 'on'", cxxopts::value<std::string>()->default_value("off"), "{\'on\'|\'off\'}")
             ("line_feed", "line feed character", cxxopts::value<std::string>()->default_value("CR"), "{\'CR\'|\'LF\'|\'CRLF\'}")
             ;
 
@@ -62,6 +65,21 @@ int main(int argc, const char* argv[])
         windowSize = result["window_size"].as<int>();
         smoothing = result["smoothing"].as<float>();
 
+        const std::string axisStr = result["axis"].as<std::string>();
+        if (axisStr == "on")
+        {
+            displayAxis = true;
+        }
+        else if (axisStr == "off")
+        {
+            displayAxis = false;
+        }
+        else
+        {
+            std::cerr << "error: --axis \'" << axisStr  << "\'" << " is invalid parameter" << std::endl;
+            return 1;
+        }
+
         const std::string lineFeedStr = result["line_feed"].as<std::string>();
         if (lineFeedStr == "CR")
         {
@@ -77,7 +95,7 @@ int main(int argc, const char* argv[])
         }
         else
         {
-            std::cerr << "error: invalid line feed character" << std::endl;
+            std::cerr << "error: --line_feed \'" << lineFeedStr  << "\'" << " is invalid parameter" << std::endl;
             return 1;
         }
     }
@@ -96,6 +114,11 @@ int main(int argc, const char* argv[])
     int sampleSize = fftSize / zeroPaddingScale;
     int samplingFrequency = 48000;
     SpectrumAnalyzer analyzer(fftSize, zeroPaddingScale, samplingFrequency);
+
+    if (displayAxis)
+    {
+        Axis::PrintAxis(characterSize, analyzer.getLabels(minFreq, maxFreq));
+    }
 
     Renderer renderer(characterSize, lineFeed);
 
@@ -118,7 +141,7 @@ int main(int argc, const char* argv[])
         {
             analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), bottomLevel, topLevel, minFreq, maxFreq);
 
-            renderer.draw(analyzer.spectrum(), windowSize, smoothing);
+            renderer.draw(analyzer.spectrum(), windowSize, smoothing, displayAxis);
 
             const auto t2 = std::chrono::high_resolution_clock::now();
 

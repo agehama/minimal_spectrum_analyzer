@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cmath>
 #include <cassert>
+#include <sstream>
 
 #include <fft.h>
 #include <fft_internal.h>
@@ -58,6 +59,58 @@ public:
         return spectrumView;
     }
 
+    std::vector<std::pair<std::string, float>> getLabels(float freqMin, float freqMax)const
+    {
+        std::vector<std::pair<std::string, float>> labels;
+
+        const size_t outputSize = fftSize;
+
+        const float logBase = 10.0f;
+        const float logFreqMin = std::pow(freqMin, 1.0f / logBase);
+        const float logFreqMax = std::pow(freqMax, 1.0f / logBase);
+
+        const auto getLabelStr = [](int freq)
+        {
+            std::stringstream ss;
+
+            if (freq < 1000)
+            {
+                ss << freq;
+            }
+            else if (0 == freq % 1000)
+            {
+                ss << (freq / 1000) << "k";
+            }
+            else
+            {
+                ss << (freq / 1000) << "." << (freq % 1000) / 100  << "k";
+            }
+
+            return ss.str();
+        };
+
+        labels.clear();
+        labels.emplace_back(getLabelStr(freqMin), 0.0f);
+        labels.emplace_back(getLabelStr(freqMax), 1.0f);
+
+        // ordered in priority
+        const std::vector<int> freqLabels({
+            100, 1000, 10000, 50, 500, 5000,
+            20, 200, 2000, 20000, 30, 300, 3000, 40, 400, 4000, 70, 700, 7000,
+            60, 600, 6000, 80, 800, 8000, 90, 900, 9000,
+            150, 1500, 15000
+        });
+
+        for (size_t i = 0; i < freqLabels.size(); ++i)
+        {
+            const int freq = freqLabels[i];
+            const float index = getAbscissa(freq, logBase, logFreqMin, logFreqMax);
+            labels.emplace_back(getLabelStr(freq), index);
+        }
+
+        return labels;
+    }
+
 private:
 
     void executeFFT()
@@ -78,21 +131,27 @@ private:
         mufft_execute_plan_1d(muplan, output, input2);
     }
 
+    float getLogScaledFreq(float t, float logBase, float logFreqMin, float logFreqMax)const
+    {
+        const float logFreq = logFreqMin + (logFreqMax - logFreqMin) * t;
+        const float freq = std::pow(logFreq, logBase);
+        return freq;
+    }
+
+    float getAbscissa(float freq, float logBase, float logFreqMin, float logFreqMax)const
+    {
+        const float logFreq = std::pow(freq, 1.0f / logBase);
+        return (logFreq - logFreqMin) / (logFreqMax - logFreqMin);
+    }
+
     void updateSpectrum(float dBsplMin, float dBsplMax, float freqMin, float freqMax)
     {
-        const size_t outputSize = fftSize / 2;
-        const float normalizeCoef = 2.0f / outputSize;
+        const size_t outputSize = fftSize;
+        const float normalizeCoef = 2.0f / inputSize;
 
         const float logBase = 10.0f;
         const float logFreqMin = std::pow(freqMin, 1.0f / logBase);
         const float logFreqMax = std::pow(freqMax, 1.0f / logBase);
-
-        const auto logScaledFreq = [&](float t)
-        {
-            const float logFreq = logFreqMin + (logFreqMax - logFreqMin) * t;
-            const float freq = std::pow(logFreq, logBase);
-            return freq;
-        };
 
         const auto getPower = [&](size_t index)
         {
@@ -110,8 +169,8 @@ private:
             const float t0 = 1.0 * i / spectrumView.size();
             const float t1 = 1.0 * (i + 1) / spectrumView.size();
 
-            const int index0 = static_cast<int>(std::floor(logScaledFreq(t0) / unitFreq));
-            const int index1 = static_cast<int>(std::floor(logScaledFreq(t1) / unitFreq));
+            const int index0 = static_cast<int>(std::floor(getLogScaledFreq(t0, logBase, logFreqMin, logFreqMax) / unitFreq));
+            const int index1 = static_cast<int>(std::floor(getLogScaledFreq(t1, logBase, logFreqMin, logFreqMax) / unitFreq));
 
             float pressureMax = getPower(index0);
             for (int j = index0 + 1; j < index1; ++j)
