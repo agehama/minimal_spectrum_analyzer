@@ -14,6 +14,8 @@ int main(int argc, const char* argv[])
     int characterSize = 0;
     float bottomLevel = 0;
     float topLevel = 0;
+    float minFreq = 0;
+    float maxFreq = 0;
     int fftSize = 0;
     int zeroPaddingScale = 0;
     int windowSize = 0;
@@ -28,6 +30,8 @@ int main(int argc, const char* argv[])
             ("c,chars", "draw the spectrum using N characters", cxxopts::value<int>()->default_value("32"), "N")
             ("b,bottom_db", "the minimum intensity(dB) of the spectrum to be displayed. N in [20, 40] is desirable", cxxopts::value<float>()->default_value("30"), "N")
             ("t,top_db", "the maximum intensity(dB) of the spectrum to be displayed. N in [50, 80] is desirable", cxxopts::value<float>()->default_value("70"), "N")
+            ("l,lower_cutoff", "minimum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("30"), "N")
+            ("u,upper_cutoff", "maximum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("5000"), "N")
             ("n,num_fft", "FFT sample size", cxxopts::value<int>()->default_value("8192"), "N")
             ("z,zero_padding", "zero padding rate", cxxopts::value<int>()->default_value("2"), "N")
             ("w,window_size", "gaussian smoothing window size", cxxopts::value<int>()->default_value("1"), "N")
@@ -46,6 +50,9 @@ int main(int argc, const char* argv[])
         characterSize = result["chars"].as<int>();
         bottomLevel = result["bottom_db"].as<float>();
         topLevel = result["top_db"].as<float>();
+
+        minFreq = result["lower_cutoff"].as<float>();
+        maxFreq = result["upper_cutoff"].as<float>();
 
         fftSize = result["num_fft"].as<int>();
         zeroPaddingScale = result["zero_padding"].as<int>();
@@ -100,7 +107,7 @@ int main(int argc, const char* argv[])
 
         if (sampleSize < capturer.bufferReadCount())
         {
-            analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), bottomLevel, topLevel);
+            analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), bottomLevel, topLevel, minFreq, maxFreq);
 
             renderer.draw(analyzer.spectrum(), windowSize, smoothing);
 

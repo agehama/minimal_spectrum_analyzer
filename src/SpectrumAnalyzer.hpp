@@ -38,7 +38,7 @@ public:
         muplan = mufft_create_plan_1d_r2c(fftSize, MUFFT_FLAG_CPU_ANY);
     }
 
-    void update(const std::vector<float>& buffer, size_t headIndex, float dBsplMin, float dBsplMax)
+    void update(const std::vector<float>& buffer, size_t headIndex, float dBsplMin, float dBsplMax, float freqMin, float freqMax)
     {
         assert(inputSize == buffer.size());
 
@@ -50,7 +50,7 @@ public:
 
         executeFFT();
 
-        updateSpectrum(dBsplMin, dBsplMax);
+        updateSpectrum(dBsplMin, dBsplMax, freqMin, freqMax);
     }
 
     const std::vector<float>& spectrum()const
@@ -78,14 +78,12 @@ private:
         mufft_execute_plan_1d(muplan, output, input2);
     }
 
-    void updateSpectrum(float dBsplMin, float dBsplMax)
+    void updateSpectrum(float dBsplMin, float dBsplMax, float freqMin, float freqMax)
     {
         const size_t outputSize = fftSize / 2;
         const float normalizeCoef = 2.0f / outputSize;
 
         const float logBase = 10.0f;
-        const float freqMin = 30;
-        const float freqMax = 5000;
         const float logFreqMin = std::pow(freqMin, 1.0f / logBase);
         const float logFreqMax = std::pow(freqMax, 1.0f / logBase);
 
