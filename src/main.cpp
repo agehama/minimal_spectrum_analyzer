@@ -1,3 +1,6 @@
+#include <chrono>
+#include <thread>
+
 #include <cxxopts.hpp>
 
 #include "SpectrumAnalyzer.hpp"
@@ -101,8 +104,14 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
+    const float maxFPS = 60.0f;
+
+    const float millisecPerFrame = 1000.0f / maxFPS;
+
     for (int i = 0;;)
     {
+        const auto t1 = std::chrono::high_resolution_clock::now();
+
         capturer.update();
 
         if (sampleSize < capturer.bufferReadCount())
@@ -110,6 +119,16 @@ int main(int argc, const char* argv[])
             analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), bottomLevel, topLevel, minFreq, maxFreq);
 
             renderer.draw(analyzer.spectrum(), windowSize, smoothing);
+
+            const auto t2 = std::chrono::high_resolution_clock::now();
+
+            std::chrono::duration<float, std::milli> elapsed = t2 - t1;
+
+            if (elapsed.count() < millisecPerFrame)
+            {
+                const int millisecSleep = static_cast<int>(millisecPerFrame - elapsed.count());
+                std::this_thread::sleep_for(std::chrono::milliseconds(millisecSleep));
+            }
 
             ++i;
         }
