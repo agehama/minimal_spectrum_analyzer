@@ -32,6 +32,10 @@ public:
         fftSize = fftSampleSize;
         inputSize = fftSize / paddingScale;
         unitFreq = samplingFrequency / static_cast<float>(fftSize);
+        // std::cout << "paddingScale: " << paddingScale << std::endl;
+        // std::cout << "fftSize: " << fftSize << std::endl;
+        // std::cout << "inputSize: " << inputSize << std::endl;
+        // std::cout << "unitFreq: " << unitFreq << std::endl;
 
         input = static_cast<float*>(mufft_alloc(inputSize * sizeof(float)));
         input2 = static_cast<float*>(mufft_alloc(fftSize * sizeof(float)));
@@ -41,7 +45,12 @@ public:
 
     void update(const std::vector<float>& buffer, size_t headIndex, float dBsplMin, float dBsplMax, float freqMin, float freqMax)
     {
-        assert(inputSize == buffer.size());
+        if (buffer.size() < inputSize)
+        {
+            // std::cout << "inputSize: " << inputSize << std::endl;
+            // std::cout << "buffer.size(): " << buffer.size() << std::endl;
+            assert(buffer.size() < inputSize);
+        }
 
         const float coef = 1.0f;
         for (size_t i = 0; i < inputSize; ++i)
@@ -175,10 +184,12 @@ private:
             float pressureMax = getPower(index0);
             for (int j = index0 + 1; j < index1; ++j)
             {
-                pressureMax = std::max(pressureMax, getPower(j));
+                //pressureMax = std::max(pressureMax, getPower(j));
+                pressureMax += getPower(j);
             }
 
-            const float f = unitFreq * i;
+            const float f = unitFreq * (index0 + index1) * 0.5;
+
             //d weighting
             const float hf = ((1037918.48f - f * f) * (1037918.48f - f * f) + 1080768.16f * f * f) /
                 ((9837328.0f - f * f) * (9837328.0f - f * f) + 11723776.0f * f * f);
