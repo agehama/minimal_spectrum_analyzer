@@ -61,7 +61,7 @@ Make sure to turn off the axis display and set the delimiter to LF.
 $ ./analyzer --axis off --line_feed LF > analyzer_log &
 ```
 
-Then ./analyzer_log will contain time-series spectral data separated by LF, as shown below.
+Then `./analyzer_log` will contain time-series spectral data separated by LF, as shown below.
 ```
 $ tail -n 10 ./analyzer_log
 ⣀⣠⣶⣾⣿⣷⣦⣤⣀⣠⣄⡀⢀⡀⣠⡀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⡀⣀⠀⠀⠀
@@ -76,5 +76,5 @@ $ tail -n 10 ./analyzer_log
 ⣤⣤⣶⣶⣦⣤⣄⣤⣀⣀⡀⠀⣀⣠⣤⣤⣤⣀⣠⣄⣤⣠⣄⣤⣀⣤⣤⣠⣦⣤⣤⣤
 ```
 
-Then, call `tail -n 1 . /analyzer_log` from shell, python, or any other environment you like to embed the spectrum display into your program.
+Then, call `tail -n 1 analyzer_log` from shell, python, or any other environment you like to embed the spectrum display into your program.
 
