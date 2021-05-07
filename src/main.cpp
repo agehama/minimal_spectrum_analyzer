@@ -21,7 +21,7 @@ int main(int argc, const char* argv[])
     float minFreq = 0;
     float maxFreq = 0;
     int fftSize = 0;
-    int zeroPaddingScale = 0;
+    int inputSize = 0;
     int windowSize = 0;
     float smoothing = 0;
     bool displayAxis = false;
@@ -33,12 +33,12 @@ int main(int argc, const char* argv[])
         options.add_options()
             ("h,help", "print this message")
             ("c,chars", "draw the spectrum using N characters", cxxopts::value<int>()->default_value("32"), "N")
-            ("t,top_db", "the maximum intensity(dB) of the spectrum to be displayed.", cxxopts::value<float>()->default_value("-6"), "N")
-            ("b,bottom_db", "the minimum intensity(dB) of the spectrum to be displayed.", cxxopts::value<float>()->default_value("-30"), "N")
-            ("l,lower_cutoff", "minimum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("30"), "N")
-            ("u,upper_cutoff", "maximum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("5000"), "N")
-            ("n,num_fft", "FFT sample size", cxxopts::value<int>()->default_value("8192"), "N")
-            ("z,zero_padding", "zero padding rate", cxxopts::value<int>()->default_value("2"), "N")
+            ("t,top_db", "the maximum intensity(dB) of the spectrum to be displayed.", cxxopts::value<float>()->default_value("-6"), "x")
+            ("b,bottom_db", "the minimum intensity(dB) of the spectrum to be displayed.", cxxopts::value<float>()->default_value("-30"), "x")
+            ("l,lower_cutoff", "minimum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("30"), "x")
+            ("u,upper_cutoff", "maximum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("5000"), "x")
+            ("f,fft_size", "FFT sample size", cxxopts::value<int>()->default_value("8192"), "N")
+            ("i,input_size", "input sample size. input_size must be less or equal to the fft_size.", cxxopts::value<int>()->default_value("2048"), "N")
             ("w,window_size", "gaussian smoothing window size", cxxopts::value<int>()->default_value("1"), "N")
             ("s,smoothing", "smoothing parameter", cxxopts::value<float>()->default_value("0.5"), "x in (0.0, 1.0]")
             ("a,axis", "display axis if 'on'", cxxopts::value<std::string>()->default_value("off"), "{\'on\'|\'off\'}")
@@ -60,8 +60,9 @@ int main(int argc, const char* argv[])
         minFreq = result["lower_cutoff"].as<float>();
         maxFreq = result["upper_cutoff"].as<float>();
 
-        fftSize = result["num_fft"].as<int>();
-        zeroPaddingScale = result["zero_padding"].as<int>();
+        fftSize = result["fft_size"].as<int>();
+        inputSize = result["input_size"].as<int>();
+
         windowSize = result["window_size"].as<int>();
         smoothing = result["smoothing"].as<float>();
 
@@ -111,9 +112,8 @@ int main(int argc, const char* argv[])
     SoundCapturerPulseAudio capturer;
 #endif
 
-    int sampleSize = fftSize / zeroPaddingScale;
     int samplingFrequency = 48000;
-    SpectrumAnalyzer analyzer(fftSize, zeroPaddingScale, samplingFrequency);
+    SpectrumAnalyzer analyzer(inputSize, fftSize, samplingFrequency);
 
     if (displayAxis)
     {
@@ -124,7 +124,7 @@ int main(int argc, const char* argv[])
 
     Renderer renderer(characterSize, lineFeed);
 
-    if (!capturer.init(sampleSize, samplingFrequency))
+    if (!capturer.init(inputSize, samplingFrequency))
     {
         return 1;
     }
@@ -139,7 +139,7 @@ int main(int argc, const char* argv[])
 
         capturer.update();
 
-        if (sampleSize < capturer.bufferReadCount())
+        if (inputSize < capturer.bufferReadCount())
         {
             analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), bottomLevel, topLevel, minFreq, maxFreq);
 

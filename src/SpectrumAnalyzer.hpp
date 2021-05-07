@@ -14,9 +14,9 @@ public:
 
     SpectrumAnalyzer() = default;
 
-    SpectrumAnalyzer(size_t fftSampleSize, int zeroPadding, int samplingFrequency)
+    SpectrumAnalyzer(size_t inputSampleSize, size_t fftSampleSize, int samplingFrequency)
     {
-        init(fftSampleSize, zeroPadding, samplingFrequency);
+        init(inputSampleSize, fftSampleSize, samplingFrequency);
     }
 
     ~SpectrumAnalyzer()
@@ -27,15 +27,19 @@ public:
         mufft_free_plan_1d(muplan);
     }
 
-    void init(size_t fftSampleSize, int zeroPadding, int samplingFrequency)
+    void init(size_t inputSampleSize, size_t fftSampleSize, int samplingFrequency)
     {
-        paddingScale = zeroPadding;
+        inputSampleSize = std::min(inputSampleSize, fftSampleSize);
+
         fftSize = fftSampleSize;
-        inputSize = fftSize / paddingScale;
+        inputSize = inputSampleSize;
         unitFreq = samplingFrequency / static_cast<float>(fftSize);
         sampleFreq = samplingFrequency;
 
-        input = static_cast<float*>(mufft_alloc(inputSize * sizeof(float)));
+        //std::cout << "inputSize: " << inputSize << std::endl;
+        //std::cout << "fftSize: " << fftSize << std::endl;
+
+        input = static_cast<float*>(mufft_alloc(inputSampleSize * sizeof(float)));
         input2 = static_cast<float*>(mufft_alloc(fftSize * sizeof(float)));
         output = static_cast<cfloat*>(mufft_alloc(fftSize * sizeof(cfloat)));
         muplan = mufft_create_plan_1d_r2c(fftSize, MUFFT_FLAG_CPU_ANY);
@@ -245,7 +249,6 @@ private:
     cfloat* output = nullptr;
     mufft_plan_1d* muplan = nullptr;
 
-    int paddingScale = 4;
     size_t fftSize = 0;
     size_t inputSize = 0;
     float unitFreq = 0.0f;
