@@ -55,13 +55,13 @@ To embed the spectrum display into other software, you can receive the text via 
 
 Here is an example of how to pass it through a temporary file.
 
-First, start a background process that redirects the stdout of `./analyzer` to a log file.
+First, start a background process that redirects the stdout of `analyzer` to a log file.
 Make sure to turn off the axis display and set the delimiter to LF.
 ```
-$ ./analyzer --axis off --line_feed LF > analyzer_log &
+$ analyzer --axis off --line_feed LF > analyzer_log &
 ```
 
-Then `./analyzer_log` will contain time-series spectral data separated by LF, as shown below.
+Then `analyzer_log` will contain time-series spectral data separated by LF, as shown below.
 ```
 $ tail -n 10 ./analyzer_log
 ⣀⣠⣶⣾⣿⣷⣦⣤⣀⣠⣄⡀⢀⡀⣠⡀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⡀⣀⠀⠀⠀
