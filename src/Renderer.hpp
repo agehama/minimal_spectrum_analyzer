@@ -115,8 +115,6 @@ public:
         {
             std::cout << "│";
         }
-
-        std::cout << std::flush;
     }
 
 private:

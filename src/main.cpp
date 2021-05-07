@@ -33,8 +33,8 @@ int main(int argc, const char* argv[])
         options.add_options()
             ("h,help", "print this message")
             ("c,chars", "draw the spectrum using N characters", cxxopts::value<int>()->default_value("32"), "N")
-            ("b,bottom_db", "the minimum intensity(dB) of the spectrum to be displayed. N in [20, 40] is desirable", cxxopts::value<float>()->default_value("30"), "N")
-            ("t,top_db", "the maximum intensity(dB) of the spectrum to be displayed. N in [50, 80] is desirable", cxxopts::value<float>()->default_value("70"), "N")
+            ("t,top_db", "the maximum intensity(dB) of the spectrum to be displayed.", cxxopts::value<float>()->default_value("-6"), "N")
+            ("b,bottom_db", "the minimum intensity(dB) of the spectrum to be displayed.", cxxopts::value<float>()->default_value("-30"), "N")
             ("l,lower_cutoff", "minimum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("30"), "N")
             ("u,upper_cutoff", "maximum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("5000"), "N")
             ("n,num_fft", "FFT sample size", cxxopts::value<int>()->default_value("8192"), "N")
@@ -118,6 +118,8 @@ int main(int argc, const char* argv[])
     if (displayAxis)
     {
         Axis::PrintAxis(characterSize, analyzer.getLabels(minFreq, maxFreq));
+
+        std::cout << "_/> " << topLevel << " [dB]\n";
     }
 
     Renderer renderer(characterSize, lineFeed);
@@ -142,6 +144,13 @@ int main(int argc, const char* argv[])
             analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), bottomLevel, topLevel, minFreq, maxFreq);
 
             renderer.draw(analyzer.spectrum(), windowSize, smoothing, displayAxis);
+
+            if (displayAxis)
+            {
+                std::cout << "_/> " << bottomLevel << " [dB]";
+            }
+
+            std::cout << std::flush;
 
             const auto t2 = std::chrono::high_resolution_clock::now();
 

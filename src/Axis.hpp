@@ -58,7 +58,5 @@ public:
         {
             std::cout << charMap[c];
         }
-
-        std::cout << "\n";
     }
 };

@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cassert>
 #include <sstream>
+#include <limits>
 
 #include <fft.h>
 #include <fft_internal.h>
@@ -32,35 +33,31 @@ public:
         fftSize = fftSampleSize;
         inputSize = fftSize / paddingScale;
         unitFreq = samplingFrequency / static_cast<float>(fftSize);
-        // std::cout << "paddingScale: " << paddingScale << std::endl;
-        // std::cout << "fftSize: " << fftSize << std::endl;
-        // std::cout << "inputSize: " << inputSize << std::endl;
-        // std::cout << "unitFreq: " << unitFreq << std::endl;
+        sampleFreq = samplingFrequency;
 
         input = static_cast<float*>(mufft_alloc(inputSize * sizeof(float)));
         input2 = static_cast<float*>(mufft_alloc(fftSize * sizeof(float)));
         output = static_cast<cfloat*>(mufft_alloc(fftSize * sizeof(cfloat)));
         muplan = mufft_create_plan_1d_r2c(fftSize, MUFFT_FLAG_CPU_ANY);
+
+        initZeroLevel();
     }
 
-    void update(const std::vector<float>& buffer, size_t headIndex, float dBsplMin, float dBsplMax, float freqMin, float freqMax)
+    void update(const std::vector<float>& buffer, size_t headIndex, float minLevel, float maxLevel, float freqMin, float freqMax)
     {
         if (buffer.size() < inputSize)
         {
-            // std::cout << "inputSize: " << inputSize << std::endl;
-            // std::cout << "buffer.size(): " << buffer.size() << std::endl;
             assert(buffer.size() < inputSize);
         }
 
-        const float coef = 1.0f;
         for (size_t i = 0; i < inputSize; ++i)
         {
-            input[i] = coef * buffer[(headIndex + i) % buffer.size()];
+            input[i] = buffer[(headIndex + i) % buffer.size()];
         }
 
         executeFFT();
 
-        updateSpectrum(dBsplMin, dBsplMax, freqMin, freqMax);
+        updateSpectrum(minLevel, maxLevel, freqMin, freqMax);
     }
 
     const std::vector<float>& spectrum()const
@@ -122,6 +119,43 @@ public:
 
 private:
 
+    void initZeroLevel()
+    {
+        const int freq = 1000;
+        const float pi = 3.1415926535f;
+        for (size_t i = 0; i < inputSize; ++i)
+        {
+            const float t = 1.0f * i / sampleFreq;
+            const float x = std::sin(freq * 2.0f * pi * t);
+            input2[i] = x;
+        }
+
+        for (int i = inputSize; i < fftSize; ++i)
+        {
+            input2[i] = 0;
+        }
+
+        mufft_execute_plan_1d(muplan, output, input2);
+
+        zeroLevel = std::numeric_limits<float>::lowest();
+        for (size_t i = 1; i < fftSize; ++i)
+        {
+            const float pressureMax = getPower(i);
+
+            const float f = unitFreq * i;
+
+            //d weighting
+            const float hf = ((1037918.48f - f * f) * (1037918.48f - f * f) + 1080768.16f * f * f) /
+                ((9837328.0f - f * f) * (9837328.0f - f * f) + 11723776.0f * f * f);
+            const float rd = (f / (6.8966888496476f * 1.0e-5f)) * std::sqrt(hf / ((f * f + 79919.29f) * (f * f + 1345600.0f)));
+            const float spl = 10.0f * std::log10(rd * pressureMax);
+
+            //const float spl = 10.0f * std::log10(pressureMax);
+
+            zeroLevel = std::max(spl, zeroLevel);
+        }
+    }
+
     void executeFFT()
     {
         const float pi = 3.1415926535f;
@@ -132,7 +166,7 @@ private:
             input2[i] = hammingWindow * input[i];
         }
 
-        for (int i = fftSize; i < fftSize; ++i)
+        for (int i = inputSize; i < fftSize; ++i)
         {
             input2[i] = 0;
         }
@@ -153,24 +187,26 @@ private:
         return (logFreq - logFreqMin) / (logFreqMax - logFreqMin);
     }
 
-    void updateSpectrum(float dBsplMin, float dBsplMax, float freqMin, float freqMax)
+    float getPower(size_t index)
+    {
+        const float normalizeCoef = 2.0f / fftSize;
+        const cfloat a = output[index];
+        float rx = a.real;
+        float ix = a.imag;
+        return normalizeCoef * std::sqrt(rx * rx + ix * ix);
+    }
+
+    void updateSpectrum(float minLevel, float maxLevel, float freqMin, float freqMax)
     {
         const size_t outputSize = fftSize;
-        const float normalizeCoef = 2.0f / inputSize;
+        const float normalizeCoef = 2.0f / outputSize;
 
         const float logBase = 10.0f;
         const float logFreqMin = std::pow(freqMin, 1.0f / logBase);
         const float logFreqMax = std::pow(freqMax, 1.0f / logBase);
 
-        const auto getPower = [&](size_t index)
-        {
-            const cfloat a = output[index];
-            float rx = normalizeCoef * a.real;
-            float ix = normalizeCoef * a.imag;
-            return std::sqrt(rx * rx + ix * ix);
-        };
-
-        const float p0 = 20 * 1.0e-5f;
+        const float bottomLevel = zeroLevel + minLevel;
+        const float topLevel = zeroLevel + maxLevel;
 
         spectrumView.resize(outputSize - 1);
         for (size_t i = 0; i < spectrumView.size(); ++i)
@@ -194,9 +230,9 @@ private:
             const float hf = ((1037918.48f - f * f) * (1037918.48f - f * f) + 1080768.16f * f * f) /
                 ((9837328.0f - f * f) * (9837328.0f - f * f) + 11723776.0f * f * f);
             const float rd = (f / (6.8966888496476f * 1.0e-5f)) * std::sqrt(hf / ((f * f + 79919.29f) * (f * f + 1345600.0f)));
-            const float spl = 20.0f * std::log10(rd * pressureMax / p0);
+            const float spl = 10.0f * std::log10(rd * pressureMax);
 
-            const float loudness = std::max(0.0f, (spl - dBsplMin)) / (dBsplMax - dBsplMin);
+            const float loudness = std::max(0.0f, (spl - bottomLevel)) / (topLevel - bottomLevel);
 
             spectrumView[i] = loudness;
         }
@@ -213,4 +249,6 @@ private:
     size_t fftSize = 0;
     size_t inputSize = 0;
     float unitFreq = 0.0f;
+    float sampleFreq = 0.0f;
+    float zeroLevel = 0.0f;
 };
