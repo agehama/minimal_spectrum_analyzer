@@ -35,13 +35,13 @@ int main(int argc, const char* argv[])
             ("c,chars", "draw the spectrum using N characters", cxxopts::value<int>()->default_value("32"), "N")
             ("t,top_db", "the maximum intensity(dB) of the spectrum to be displayed.", cxxopts::value<float>()->default_value("-6"), "x")
             ("b,bottom_db", "the minimum intensity(dB) of the spectrum to be displayed.", cxxopts::value<float>()->default_value("-30"), "x")
-            ("l,lower_cutoff", "minimum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("30"), "x")
-            ("u,upper_cutoff", "maximum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("5000"), "x")
+            ("l,lower_freq", "minimum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("30"), "x")
+            ("u,upper_freq", "maximum cutoff frequency(Hz)", cxxopts::value<float>()->default_value("5000"), "x")
             ("f,fft_size", "FFT sample size", cxxopts::value<int>()->default_value("8192"), "N")
             ("i,input_size", "input sample size. input_size must be less or equal to the fft_size.", cxxopts::value<int>()->default_value("2048"), "N")
-            ("w,window_size", "gaussian smoothing window size", cxxopts::value<int>()->default_value("1"), "N")
-            ("s,smoothing", "smoothing parameter", cxxopts::value<float>()->default_value("0.5"), "x in (0.0, 1.0]")
-            ("a,axis", "display axis if 'on'", cxxopts::value<std::string>()->default_value("off"), "{\'on\'|\'off\'}")
+            ("g,gaussian_diameter", "display each spectrum bar with a Gaussian blur with the surrounding N bars.", cxxopts::value<int>()->default_value("1"), "N")
+            ("s,smoothing", "linear interpolation parameter for the previous frame. if 1.0, always display the latest value.", cxxopts::value<float>()->default_value("0.5"), "x in (0.0, 1.0]")
+            ("a,axis", "display axis if 'on'", cxxopts::value<std::string>()->default_value("on"), "{\'on\'|\'off\'}")
             ("line_feed", "line feed character", cxxopts::value<std::string>()->default_value("CR"), "{\'CR\'|\'LF\'|\'CRLF\'}")
             ;
 
@@ -57,13 +57,13 @@ int main(int argc, const char* argv[])
         bottomLevel = result["bottom_db"].as<float>();
         topLevel = result["top_db"].as<float>();
 
-        minFreq = result["lower_cutoff"].as<float>();
-        maxFreq = result["upper_cutoff"].as<float>();
+        minFreq = result["lower_freq"].as<float>();
+        maxFreq = result["upper_freq"].as<float>();
 
         fftSize = result["fft_size"].as<int>();
         inputSize = result["input_size"].as<int>();
 
-        windowSize = result["window_size"].as<int>();
+        windowSize = result["gaussian_diameter"].as<int>();
         smoothing = result["smoothing"].as<float>();
 
         const std::string axisStr = result["axis"].as<std::string>();
