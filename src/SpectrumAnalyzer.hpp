@@ -47,7 +47,7 @@ public:
         initZeroLevel();
     }
 
-    void update(const std::vector<float>& buffer, size_t headIndex, float minLevel, float maxLevel, float freqMin, float freqMax)
+    void update(const std::vector<float>& buffer, size_t headIndex, float minLevel, float maxLevel, float freqMin, float freqMax, float logBase)
     {
         if (buffer.size() < inputSize)
         {
@@ -61,7 +61,7 @@ public:
 
         executeFFT();
 
-        updateSpectrum(minLevel, maxLevel, freqMin, freqMax);
+        updateSpectrum(minLevel, maxLevel, freqMin, freqMax, logBase);
     }
 
     const std::vector<float>& spectrum()const
@@ -69,13 +69,12 @@ public:
         return spectrumView;
     }
 
-    std::vector<std::pair<std::string, float>> getLabels(float freqMin, float freqMax)const
+    std::vector<std::pair<std::string, float>> getLabels(float freqMin, float freqMax, float logBase)const
     {
         std::vector<std::pair<std::string, float>> labels;
 
         const size_t outputSize = fftSize;
 
-        const float logBase = 10.0f;
         const float logFreqMin = std::pow(freqMin, 1.0f / logBase);
         const float logFreqMax = std::pow(freqMax, 1.0f / logBase);
 
@@ -108,7 +107,10 @@ public:
             100, 1000, 10000, 50, 500, 5000,
             20, 200, 2000, 20000, 30, 300, 3000, 40, 400, 4000, 70, 700, 7000,
             60, 600, 6000, 80, 800, 8000, 90, 900, 9000,
-            150, 1500, 15000
+            150, 1500, 15000, 550, 5500,
+            250, 2500, 350, 3500, 450, 4500, 750, 7500,
+            650, 6500, 850, 8500, 950, 9500,
+            1100, 11000, 1200, 12000, 1300, 13000, 1400, 14000, 1600, 16000, 1700, 17000, 1800, 18000, 1900, 19000
         });
 
         for (size_t i = 0; i < freqLabels.size(); ++i)
@@ -200,12 +202,11 @@ private:
         return normalizeCoef * std::sqrt(rx * rx + ix * ix);
     }
 
-    void updateSpectrum(float minLevel, float maxLevel, float freqMin, float freqMax)
+    void updateSpectrum(float minLevel, float maxLevel, float freqMin, float freqMax, float logBase)
     {
         const size_t outputSize = fftSize;
         const float normalizeCoef = 2.0f / outputSize;
 
-        const float logBase = 10.0f;
         const float logFreqMin = std::pow(freqMin, 1.0f / logBase);
         const float logFreqMax = std::pow(freqMax, 1.0f / logBase);
 

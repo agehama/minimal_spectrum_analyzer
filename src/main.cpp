@@ -32,7 +32,7 @@ int main(int argc, const char* argv[])
 
     if (option.displayAxis)
     {
-        Axis::PrintAxis(option.characterSize, analyzer.getLabels(option.minFreq, option.maxFreq));
+        Axis::PrintAxis(option.characterSize, analyzer.getLabels(option.minFreq, option.maxFreq, option.axisLogBase));
 
         std::cout << "_/> " << option.topLevel << " [dB]\n";
     }
@@ -56,7 +56,7 @@ int main(int argc, const char* argv[])
 
         if (option.inputSize < capturer.bufferReadCount())
         {
-            analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), option.bottomLevel, option.topLevel, option.minFreq, option.maxFreq);
+            analyzer.update(capturer.getBuffer(), capturer.bufferHeadIndex(), option.bottomLevel, option.topLevel, option.minFreq, option.maxFreq, option.axisLogBase);
 
             renderer.draw(analyzer.spectrum(), option.windowSize, option.smoothing, option.displayAxis);
 

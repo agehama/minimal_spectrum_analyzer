@@ -28,6 +28,7 @@ public:
                 ("g,gaussian_diameter", "display each spectrum bar with a Gaussian blur with the surrounding N bars.", cxxopts::value<int>()->default_value("1"), "N")
                 ("s,smoothing", "x in (0.0, 1.0] is linear interpolation parameter for the previous frame. if 1.0, always display the latest value.", cxxopts::value<float>()->default_value("0.5"), "x")
                 ("a,axis", "display axis if 'on'.", cxxopts::value<std::string>()->default_value("on"), "{\'on\'|\'off\'}")
+                ("axis_log_base", "logarithm base of the horizontal axis.", cxxopts::value<float>()->default_value("10"), "x")
                 ("line_feed", "line feed character.", cxxopts::value<std::string>()->default_value("CR"), "{\'CR\'|\'LF\'|\'CRLF\'}")
                 ;
 
@@ -57,6 +58,7 @@ public:
 
             minFreq = result["lower_freq"].as<float>();
             maxFreq = result["upper_freq"].as<float>();
+            axisLogBase = result["axis_log_base"].as<float>();
 
             fftSize = result["fft_size"].as<int>();
             const int expMin = 4;
@@ -153,6 +155,7 @@ public:
     float topLevel = 0;
     float minFreq = 0;
     float maxFreq = 0;
+    float axisLogBase = 0;
     int fftSize = 0;
     int inputSize = 0;
     int windowSize = 0;
