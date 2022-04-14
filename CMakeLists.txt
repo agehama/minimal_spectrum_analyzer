@@ -33,4 +33,4 @@ add_subdirectory(external/cxxopts)
 target_include_directories(analyzer PUBLIC "${CMAKE_SOURCE_DIR}/external/cxxopts/include")
 
 
-target_link_libraries(analyzer ${ANALYZER_SYSTEM_LIBS} muFFT muFFT-avx muFFT-sse muFFT-sse3)
+target_link_libraries(analyzer ${ANALYZER_SYSTEM_LIBS} muFFT)
